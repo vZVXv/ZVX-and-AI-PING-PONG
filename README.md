@@ -1,5 +1,5 @@
 Google's AI helped me create this game.
-Play - https://vzvxv.github.io/ZVX-and-AI-PING-PONG-SOUND/
+Play - https://vzvxv.github.io/ZVX-and-AI-PING-PONG
 
 ----------------------------------------------
 
@@ -16,3 +16,6 @@ This version will receive a version number in the future and possibly a list of 
 It's a shame I'm so lazy...
 
 ----------------------------------------------
+The version number v1.0.1 has been assigned.
+----------------------------------------------
+
