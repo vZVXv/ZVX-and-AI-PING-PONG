@@ -4,20 +4,9 @@ Play - https://vzvxv.github.io/ZVX-and-AI-PING-PONG
 
 ----------------------------------------------
 
-Технически это 47 версия ибо код собирался по кусочкам и переписывался ИИ не 1 раз.
-
-Эта версия в будущем получит номер версии и возможно список изменений которые "я" буду вносить...
-Жаль, что я очень ленив...
-
-translate.google.com/ ru --> en
-
-Technically, this is version 47, as the code was pieced together and rewritten by the AI ​​more than once.
-
-This version will receive a version number in the future and possibly a list of changes that "I" will make...
-It's a shame I'm so lazy...
 
 ----------------------------------------------
-The version number v1.0.1 has been assigned.
+The version number v1.1.0 has been assigned.
 ----------------------------------------------
 What follows is an untranslatable Russian dialect
 
@@ -63,5 +52,15 @@ HUD-барометр: Внизу экрана есть индикатор (Timer
 Игра запоминает твой лучший результат (BEST SCORE) в браузере через localStorage. 
 Даже если ты обновишь страницу, рекорд останется.
 
+6. Поддержка запуска на телефонах.
+
+на моём андроид точно работает ))))
+внизу появится слайдер управления
+
 ----------------------------------------------
+
+версия - 1.0.0 - имела пункты с 1 по 5 - загружена на Github
+версия - 1.0.1 - получила улучшение управлению мышью на ПК
+версия - 1.0.9 - получила поддрежку игры на телефоне
+версия - 1.1.0 - получила поддержку вибрации на телефоне
 
