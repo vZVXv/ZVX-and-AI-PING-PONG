@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZVX and AI PING PONG v1.1.3</title>
+    <title>ZVX and AI PING PONG v1.2.4</title>
     <style>
         :root { --neon: #0f0; --bg: #050505; }
         body { 
@@ -15,36 +15,26 @@
             width: 800px; max-width: 95%; text-align: center; font-size: clamp(16px, 5vw, 32px);
             font-weight: 900; letter-spacing: 5px; padding: 10px 0; margin-bottom: 10px;
             border: 3px solid var(--neon); text-shadow: 0 0 10px var(--neon);
-            animation: flicker 3s infinite;
+            animation: flicker 3s infinite; transition: all 0.4s ease;
         }
         @keyframes flicker { 0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.7; } }
-        
         #game-container { position: relative; max-width: 95%; }
-        canvas { border: 2px solid var(--neon); background: #000; display: block; max-width: 100%; max-height: 500px; cursor: none; }
-        
+        canvas { border: 2px solid var(--neon); background: #000; display: block; max-width: 100%; max-height: 500px; cursor: none; transition: border-color 0.4s ease; }
         .hud { width: 800px; max-width: 95%; display: flex; justify-content: space-between; margin-bottom: 10px; font-size: clamp(12px, 4vw, 22px); font-weight: bold; }
         #b-bar { width: 800px; max-width: 95%; height: 4px; background: #111; margin-top: 8px; overflow: hidden; border-radius: 2px; }
         #b-fill { width: 0%; height: 100%; transition: width 0.1s linear; background: #0f0; }
-        
         #slider-container { width: 800px; max-width: 95%; margin-top: 40px; display: none; }
         .touch-device #slider-container { display: block; }
-        #paddleControl {
-            -webkit-appearance: none; width: 100%; height: 25px; background: #000;
-            border: 2px solid var(--neon); border-radius: 15px; outline: none;
-        }
-        #paddleControl::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 65px; height: 65px; 
-            background: #000; border: 3px solid var(--neon); border-radius: 10px;
-            box-shadow: 0 0 15px var(--neon); cursor: pointer;
-        }
+        #paddleControl { -webkit-appearance: none; width: 100%; height: 25px; background: #000; border: 2px solid var(--neon); border-radius: 15px; outline: none; }
+        #paddleControl::-webkit-slider-thumb { -webkit-appearance: none; width: 65px; height: 65px; background: #000; border: 3px solid var(--neon); border-radius: 10px; box-shadow: 0 0 15px var(--neon); cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="header">ZVX and AI PING PONG v1.1.3</div>
+    <div id="header">ZVX and AI PING PONG v1.2.4</div>
     <div class="hud">
-        <div>SCORE: <span id="score">0</span></div>
+        <div>SCORE: <span id="score">0</span> <span id="argus-label" style="display:none; color:#a0f;">| ARGUS: <span id="argus-score">0</span></span></div>
         <div id="msg" style="color:#fff; font-size: 14px; text-shadow: 0 0 5px #fff; text-align: center;"></div>
-        <div>BEST: <span id="best">0</span></div>
+        <div>BEST: <span id="best">0</span> <span id="argus-best-label" style="display:none; color:#a0f;">(A: <span id="argus-best">0</span>)</span></div>
     </div>
     <div id="game-container"><canvas id="game" width="800" height="500"></canvas></div>
     <div id="b-bar"><div id="b-fill"></div></div>
@@ -52,11 +42,10 @@
 
     <script>
         const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score'), bestEl = document.getElementById('best');
+        const headerEl = document.getElementById('header'), scoreEl = document.getElementById('score'), bestEl = document.getElementById('best');
         const bFill = document.getElementById('b-fill'), msgEl = document.getElementById('msg'), slider = document.getElementById('paddleControl');
         
-        let gameActive = false;
-        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        let gameActive = false, isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         if (isTouch) document.body.classList.add('touch-device');
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -76,25 +65,51 @@
             triangle() { this.play(200, 'sine', 0.1, 0.2); }
         };
 
+        // Сгруппированные переменные счета и рекордов
+        let argusScore = 0;
+        let argusBest = localStorage.getItem('rv_argus_best') || 0;
         let score = 0, best = localStorage.getItem('rv_best') || 0;
+        
         bestEl.innerText = best;
+        document.getElementById('argus-best').innerText = argusBest;
+
         let pY = 200, pH = 90, particles = [], powerups = [], enemies = [], balls = [{x: 400, y: 250, dx: 5, dy: 5}]; 
         let isGameOver = false, obstacle = null, lastSpawnScore = -1, bTimer = 0, gameSpeedMult = 1.0, scannerY = 0;
+        let trajOn = false;
+        const MAX_SPEED = 22;
 
-        function tryStart() {
-            if (!gameActive || isGameOver) {
-                SFX.init();
-                resetGame();
-                gameActive = true;
-                isGameOver = false;
+        Object.defineProperty(window, 'Argus2D', {
+            get: function() {
+                trajOn = !trajOn;
+                const color = trajOn ? "#a0f" : "#0f0";
+                pH = trajOn ? 250 : 90;
+                
+                headerEl.innerText = trajOn ? "Argus2D PING PONG" : "ZVX and AI PING PONG v1.2.4";
+                headerEl.style.color = color;
+                headerEl.style.borderColor = color;
+                headerEl.style.textShadow = `0 0 15px ${color}`;
+                canvas.style.borderColor = color;
+                document.documentElement.style.setProperty('--neon', color);
+                
+                document.getElementById('argus-label').style.display = trajOn ? "inline" : "none";
+                document.getElementById('argus-best-label').style.display = trajOn ? "inline" : "none";
+                
+                if (trajOn) SFX.powerup();
+                msgEl.innerText = trajOn ? "ARGUS SYSTEM: OVERDRIVE" : "ARGUS SYSTEM: STANDBY";
+                msgEl.style.color = color;
+                
+                return "Argus2D Status: " + trajOn;
             }
-        }
+        });
 
+        function tryStart() { if (!gameActive || isGameOver) { SFX.init(); resetGame(); gameActive = true; isGameOver = false; } }
+        
         canvas.addEventListener('mousedown', tryStart);
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); tryStart(); });
+        
+        slider.addEventListener('touchstart', () => { if (!gameActive || isGameOver) tryStart(); }, {passive: true});
         slider.addEventListener('input', () => { if (!isGameOver) pY = (slider.value / 100) * (canvas.height - pH); });
-        slider.addEventListener('touchstart', tryStart);
-
+        
         window.addEventListener('mousemove', (e) => {
             if (isGameOver || isTouch) return;
             const r = canvas.getBoundingClientRect();
@@ -110,27 +125,30 @@
             return Math.abs(area - (a1 + a2 + a3)) < 1.0;
         }
 
-        function forceResetUI() { bTimer = 0; bFill.style.width = "0%"; msgEl.innerText = ""; pH = 90; gameSpeedMult = 1.0; slider.value = 50; }
+        function forceResetUI() { bTimer = 0; bFill.style.width = "0%"; msgEl.innerText = ""; pH = trajOn ? 250 : 90; gameSpeedMult = 1.0; slider.value = 50; }
         function shake(intensity = 15) { canvas.style.transform = `translate(${(Math.random()-0.5)*intensity}px, ${(Math.random()-0.5)*intensity}px)`; setTimeout(() => canvas.style.transform = 'translate(0,0)', 50); }
         function createParticles(x, y, color, count=12) { for(let i=0; i<count; i++) particles.push({ x, y, dx: (Math.random()-0.5)*10, dy: (Math.random()-0.5)*10, life: 1, color }); }
-        function resetGame() { score = 0; scoreEl.innerText = 0; lastSpawnScore = -1; balls = [{x: 400, y: 250, dx: 5, dy: 5}]; forceResetUI(); powerups = []; enemies = []; particles = []; obstacle = null; }
-
-        function drawButton(text) {
-            ctx.strokeStyle = "#0f0"; ctx.lineWidth = 3; ctx.strokeRect(300, 220, 200, 60);
-            ctx.fillStyle = "#0f0"; ctx.font = "bold 24px Consolas"; ctx.textAlign = "center";
-            ctx.shadowBlur = 15; ctx.shadowColor = "#0f0";
-            ctx.fillText(text, 400, 258); ctx.shadowBlur = 0;
+        
+        function resetGame() { 
+            score = 0; argusScore = 0; 
+            scoreEl.innerText = 0; document.getElementById('argus-score').innerText = 0;
+            lastSpawnScore = -1; 
+            balls = [{x: 400, y: 250, dx: 5, dy: 5}]; 
+            forceResetUI(); powerups = []; enemies = []; particles = []; obstacle = null; 
         }
 
         function update() {
             if (!gameActive || isGameOver) {
                 ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const btnColor = trajOn ? "#a0f" : "#0f0";
+                ctx.strokeStyle = btnColor; ctx.lineWidth = 3; ctx.strokeRect(300, 220, 200, 60);
+                ctx.fillStyle = btnColor; ctx.font = "bold 24px Consolas"; ctx.textAlign = "center";
                 if (isGameOver) {
-                    ctx.fillStyle = "white"; ctx.font = "bold 40px Consolas"; ctx.textAlign = "center";
-                    ctx.fillText("GAME OVER", 400, 150);
-                    ctx.font = "20px Consolas"; ctx.fillText("SCORE: " + score, 400, 190);
-                    drawButton("RESTART");
-                } else { drawButton("START"); }
+                    ctx.fillStyle = "white"; ctx.font = "bold 40px Consolas"; ctx.fillText("GAME OVER", 400, 150);
+                    ctx.font = "20px Consolas"; ctx.fillText("NORMAL SCORE: " + score, 400, 190);
+                    if(argusScore > 0) { ctx.fillStyle = "#a0f"; ctx.fillText("ARGUS SCORE: " + argusScore, 400, 215); }
+                    ctx.fillStyle = btnColor; ctx.fillText("RESTART", 400, 258);
+                } else { ctx.fillText("START", 400, 258); }
                 requestAnimationFrame(update); return;
             }
 
@@ -140,13 +158,14 @@
 
             if (obstacle) {
                 obstacle.timer--; scannerY = (scannerY + 5) % canvas.height;
-                ctx.strokeStyle = "rgba(0, 255, 255, 0.1)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, scannerY); ctx.lineTo(canvas.width, scannerY); ctx.stroke();
-                let opacity = (obstacle.timer < 120 && Math.floor(obstacle.timer / 10) % 2 === 0) ? 0.2 : 1;
+                ctx.strokeStyle = "rgba(0, 255, 255, 0.1)"; ctx.lineWidth = 1; ctx.beginPath(); 
+                ctx.moveTo(0, scannerY); ctx.lineTo(canvas.width, scannerY); ctx.stroke();
+                let op = (obstacle.timer < 120 && Math.floor(obstacle.timer / 10) % 2 === 0) ? 0.2 : 1;
                 let x1 = obstacle.x, y1 = obstacle.y - 60, x2 = obstacle.x + 60, y2 = obstacle.y + 60, x3 = obstacle.x - 60, y3 = obstacle.y + 60;
-                ctx.strokeStyle = `rgba(255, 255, 0, ${opacity})`; ctx.lineWidth = 4;
-                ctx.shadowBlur = (opacity > 0.5) ? 15 : 0; ctx.shadowColor = "#ff0";
+                ctx.strokeStyle = `rgba(255, 255, 0, ${op})`; ctx.lineWidth = 4;
+                ctx.shadowBlur = (op > 0.5) ? 15 : 0; ctx.shadowColor = "#ff0";
                 ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.closePath(); ctx.stroke(); ctx.shadowBlur = 0;
-                if (obstacle.timer <= 0) { obstacle = null; msgEl.innerText = ""; }
+                if (obstacle.timer <= 0) { obstacle = null; if(!trajOn) msgEl.innerText = ""; }
             }
 
             enemies.forEach((e, i) => {
@@ -169,29 +188,88 @@
             if (bTimer > 0) { bTimer--; bFill.style.width = (bTimer / 5) + "%"; if (bTimer <= 0) forceResetUI(); }
 
             balls.forEach((b, i) => {
+                if (trajOn) {
+                    let tx = b.x, ty = b.y, tdx = b.dx, tdy = b.dy;
+                    ctx.beginPath(); ctx.moveTo(tx, ty);
+                    ctx.strokeStyle = `rgba(160, 0, 255, 0.4)`;
+                    for (let j = 0; j < 250; j++) {
+                        tx += tdx * gameSpeedMult; ty += tdy * gameSpeedMult;
+                        if (ty < 10) { ty = 10; tdy = Math.abs(tdy); } else if (ty > 490) { ty = 490; tdy = -Math.abs(tdy); }
+                        if (tx > 790) { tx = 790; tdx = -Math.abs(tdx); }
+                        if (obstacle && isPointInTriangle(tx, ty, obstacle.x, obstacle.y-60, obstacle.x+60, obstacle.y+60, obstacle.x-60, obstacle.y+60)) {
+                            tdx = Math.abs(tdx) * 1.05; tdy = (ty < obstacle.y) ? -Math.abs(tdy) : Math.abs(tdy); tx += tdx;
+                        }
+                        if (j % 5 === 0) ctx.lineTo(tx, ty);
+                        if (tx < 40 || tx > 800) break;
+                    }
+                    ctx.stroke();
+                }
+
+                let nextX = b.x + b.dx * gameSpeedMult;
+                if (b.dx < 0 && b.x >= 40 && nextX <= 40) {
+                    let intersectY = b.y + (b.dy * (40 - b.x) / b.dx);
+                    if (intersectY > pY && intersectY < pY + pH) {
+                        b.dx = Math.min(Math.abs(b.dx) * 1.08, MAX_SPEED);
+                        b.dy = Math.max(Math.min(b.dy * 1.08, MAX_SPEED), -MAX_SPEED);
+                        b.x = 42; 
+                        
+                        if (trajOn) {
+                            argusScore++;
+                            document.getElementById('argus-score').innerText = argusScore;
+                        } else {
+                            score++;
+                            scoreEl.innerText = score;
+                        }
+                        
+                        shake(15); SFX.paddle();
+                        createParticles(b.x, b.y, trajOn ? '#a0f' : '#0f0', 15);
+                        if (Math.random() > 0.7) { 
+                            const t = [{n:'WIDE',c:'#0f0'},{n:'SLOW',c:'#0ff'},{n:'MULTI',c:'#ff0'}][Math.floor(Math.random()*3)]; 
+                            powerups.push({x:780, y:Math.random()*400+50, dx:-3, dy:(Math.random()>0.5?2:-2), ...t}); 
+                        }
+                        if (Math.random() > 0.8) enemies.push({x:800, y:Math.random()*460+20, dx:-(4+Math.random()*3), dy:(Math.random()>0.5?2:-2)});
+                        if (score > 0 && score % 10 === 0 && lastSpawnScore !== score) { 
+                            lastSpawnScore = score; obstacle = { x: 450 + Math.random() * 200, y: 150 + Math.random() * 200, timer: 540 }; 
+                        }
+                    }
+                }
+
                 b.x += b.dx * gameSpeedMult; b.y += b.dy * gameSpeedMult;
-                ctx.fillStyle = `hsl(${Math.max(0, 120 - (Math.sqrt(b.dx**2 + b.dy**2) - 7) * 12)}, 100%, 50%)`;
+                ctx.fillStyle = trajOn ? "#a0f" : `hsl(${Math.max(0, 120 - (Math.sqrt(b.dx**2 + b.dy**2) - 7) * 12)}, 100%, 50%)`;
                 ctx.beginPath(); ctx.arc(b.x, b.y, 9, 0, 7); ctx.fill();
                 if(b.y < 10 || b.y > 490) { b.dy *= -1; SFX.hit(); }
                 if(b.x > 790) { b.dx *= -1; b.x = 790; shake(10); SFX.hit(); }
-                if (obstacle && isPointInTriangle(b.x, b.y, obstacle.x, obstacle.y - 60, obstacle.x + 60, obstacle.y + 60, obstacle.x - 60, obstacle.y + 60)) {
-                    b.dx = Math.abs(b.dx) * 1.05; b.dy = (b.y < obstacle.y) ? -Math.abs(b.dy) : Math.abs(b.dy);
+                if (obstacle && isPointInTriangle(b.x, b.y, obstacle.x, obstacle.y-60, obstacle.x+60, obstacle.y+60, obstacle.x-60, obstacle.y+60)) {
+                    b.dx = Math.min(Math.abs(b.dx) * 1.05, MAX_SPEED);
+                    b.dy = (b.y < obstacle.y) ? -Math.abs(b.dy) : Math.abs(b.dy);
                     createParticles(b.x, b.y, "#ff0", 10); shake(5); SFX.triangle();
                 }
-                if(b.dx < 0 && b.x < 40 && b.x > 15 && b.y > pY && b.y < pY + pH) {
-                    b.dx = Math.abs(b.dx) * 1.08; b.dy = (Math.abs(b.dy) < 1.5) ? (Math.random() > 0.5 ? 4 : -4) : b.dy * 1.08;
-                    b.x = 42; score++; scoreEl.innerText = score; shake(15); SFX.paddle(); if (navigator.vibrate) navigator.vibrate(20);
-                    createParticles(b.x, b.y, '#0f0', 15);
-                    if (Math.random() > 0.7) { const t = [{n:'WIDE',c:'#0f0'},{n:'SLOW',c:'#0ff'},{n:'MULTI',c:'#ff0'}][Math.floor(Math.random()*3)]; powerups.push({x:780, y:Math.random()*400+50, dx:-3, dy:(Math.random()>0.5?2:-2), ...t}); }
-                    if (Math.random() > 0.8) enemies.push({x:800, y:Math.random()*460+20, dx:-(4+Math.random()*3), dy:(Math.random()>0.5?2:-2)});
-                    if (score > 0 && score % 10 === 0 && lastSpawnScore !== score) { lastSpawnScore = score; obstacle = { x: 450 + Math.random() * 200, y: 150 + Math.random() * 200, timer: 540 }; msgEl.innerText = "TRIANGLE ACTIVE"; msgEl.style.color = "#ff0"; }
+                
+                if(b.x < -20) { 
+                    if(balls.length > 1) {
+                        balls.splice(i, 1);
+                    } else { 
+                        // ПРОВЕРКА РЕКОРДОВ ПРИ ГЕЙМОВЕРЕ
+                        if (trajOn) {
+                            if (argusScore > argusBest) {
+                                argusBest = argusScore;
+                                localStorage.setItem('rv_argus_best', argusBest);
+                                document.getElementById('argus-best').innerText = argusBest;
+                            }
+                        } else {
+                            if (score > best) {
+                                best = score;
+                                localStorage.setItem('rv_best', best);
+                                bestEl.innerText = best;
+                            }
+                        }
+                        isGameOver = true; SFX.damage(); forceResetUI(); 
+                    } 
                 }
-                if(b.x < -20) { if(balls.length > 1) { balls.splice(i, 1); SFX.hit(); } else { if(score > best) { best = score; localStorage.setItem('rv_best', best); bestEl.innerText = best; } isGameOver = true; SFX.damage(); forceResetUI(); } }
             });
 
-            ctx.fillStyle = (bTimer > 0) ? bFill.style.backgroundColor : '#0f0';
-            ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
-            ctx.fillRect(15, pY, 12, pH); ctx.shadowBlur = 0;
+            ctx.fillStyle = trajOn ? "#a0f" : ((bTimer > 0) ? bFill.style.backgroundColor : '#0f0');
+            ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle; ctx.fillRect(15, pY, 12, pH); ctx.shadowBlur = 0;
             requestAnimationFrame(update);
         }
         update();
