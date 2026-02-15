@@ -1,53 +1,185 @@
 <!DOCTYPE html>
+<!-- Объявление типа документа: сообщаем браузеру, что это современный стандарт HTML5 -->
 <html lang="ru">
 <head>
+    <!-- Установка кодировки UTF-8 для корректного отображения русского языка -->
     <meta charset="UTF-8">
+    
+    <!-- Настройки области просмотра: 
+         width=device-width — ширина равна ширине экрана телефона.
+         initial-scale=1.0 — начальный масштаб 100%.
+         maximum-scale=1.0 и user-scalable=no — запрещаем пользователю приближать/отдалять страницу пальцами (важно для игр). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- Название вкладки в браузере -->
     <title>ZVX and AI PING PONG v1.2.6</title>
+
     <style>
-        :root { --neon: #0f0; --bg: #050505; }
+        /* Глобальные настройки стилей */
+        :root { 
+            --neon: #0f0;  /* Создаем переменную для цвета (ярко-зеленый неон) */
+            --bg: #050505; /* Создаем переменную для цвета фона (черный графит) */
+        }
+
+        /* Настройка всего тела страницы */
         body { 
-            background: var(--bg); color: var(--neon); font-family: 'Consolas', monospace; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: 100vh; margin: 0; overflow: hidden; user-select: none; touch-action: none;
+            background: var(--bg);        /* Устанавливаем черный фон из переменной */
+            color: var(--neon);           /* Устанавливаем основной цвет текста */
+            font-family: 'Consolas', monospace; /* Шрифт имитирует код или старые компьютеры */
+            display: flex;                /* Включаем гибкий контейнер для центровки */
+            flex-direction: column;       /* Располагаем элементы (заголовок, канвас) вертикально друг под другом */
+            align-items: center;          /* Центруем все элементы по горизонтали */
+            justify-content: center;      /* Центруем все элементы по вертикали */
+            height: 100vh;                /* Высота страницы на весь экран */
+            margin: 0;                    /* Убираем стандартные отступы браузера по краям */
+            overflow: hidden;             /* Запрещаем прокрутку страницы (скроллбары) */
+            user-select: none;            /* Запрещаем выделять текст синим цветом при долгом нажатии */
+            touch-action: none;           /* Отключаем жесты браузера (скролл пальцем, обновление страницы потяжкой вниз) */
         }
-        /* Стили заголовка с эффектом мерцания */
+
+        /* Стиль главного заголовка */
         #header {
-            width: 800px; max-width: 95%; text-align: center; font-size: clamp(16px, 5vw, 32px);
-            font-weight: 900; letter-spacing: 5px; padding: 10px 0; margin-bottom: 10px;
-            border: 3px solid var(--neon); text-shadow: 0 0 10px var(--neon);
-            animation: flicker 3s infinite; transition: all 0.4s ease;
+            width: 800px;                 /* Ширина заголовка (как у игрового поля) */
+            max-width: 95%;               /* На узких телефонах ширина не более 95% экрана */
+            text-align: center;           /* Текст внутри рамки по центру */
+            font-size: clamp(16px, 5vw, 32px); /* Размер шрифта: минимум 16px, на больших экранах до 32px */
+            font-weight: 900;             /* Очень жирный шрифт */
+            letter-spacing: 5px;          /* Расстояние между буквами для красоты */
+            padding: 10px 0;              /* Внутренние отступы сверху и снизу текста */
+            margin-bottom: 10px;          /* Отступ снизу до игрового поля */
+            border: 3px solid var(--neon); /* Рамка вокруг заголовка */
+            text-shadow: 0 0 10px var(--neon); /* Свечение текста (неоновый эффект) */
+            animation: flicker 3s infinite;    /* Привязываем анимацию "flicker", длительность 3 сек, бесконечно */
+            transition: all 0.4s ease;    /* Плавный переход при смене цвета (например, в режиме Argus) */
         }
+
+        /* Логика анимации мерцания (имитация старой лампы) */
         @keyframes flicker { 
+            /* На определенных процентах времени анимации прозрачность полная (1) или частичная (0.7) */
             0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; } 
             20%, 24%, 55% { opacity: 0.7; } 
         }
         
-        #game-container { position: relative; max-width: 95%; }
-        canvas { border: 2px solid var(--neon); background: #000; display: block; max-width: 100%; max-height: 500px; cursor: none; transition: border-color 0.4s ease; }
+        /* Контейнер, в котором лежит холст игры */
+        #game-container { 
+            position: relative;           /* Позволяет позиционировать элементы внутри (если понадобится) */
+            max-width: 95%;               /* Ширина контейнера подстраивается под экран телефона */
+        }
+
+        /* Стиль самого игрового поля (Canvas) */
+        canvas { 
+            border: 2px solid var(--neon); /* Рамка вокруг игрового поля */
+            background: #000;             /* Внутри поля всегда чисто черный цвет */
+            display: block;               /* Убираем лишние зазоры снизу канваса */
+            max-width: 100%;              /* Поле автоматически сужается под размер экрана */
+            max-height: 500px;            /* Ограничение высоты, чтобы не вылезало за экран */
+            cursor: none;                 /* Скрываем курсор мыши внутри поля игры */
+            transition: border-color 0.4s ease; /* Плавная смена цвета рамки */
+        }
         
-        /* Панель счета (HUD) */
-        .hud { width: 800px; max-width: 95%; display: flex; justify-content: space-between; margin-bottom: 10px; font-size: clamp(12px, 4vw, 22px); font-weight: bold; }
+        /* Панель с цифрами счета и рекордов (HUD) */
+        .hud { 
+            width: 800px;                 /* Ширина панели совпадает с полем */
+            max-width: 95%;               /* Адаптивность для мобильных */
+            display: flex;                /* Располагаем счет слева и рекорд справа */
+            justify-content: space-between; /* Максимально раздвигаем элементы по краям */
+            margin-bottom: 10px;          /* Отступ снизу */
+            font-size: clamp(12px, 4vw, 22px); /* Размер шрифта подстраивается под экран */
+            font-weight: bold;            /* Жирный шрифт для цифр */
+        }
         
-        /* Полоска длительности бонуса */
-        #b-bar { width: 800px; max-width: 95%; height: 4px; background: #111; margin-top: 8px; overflow: hidden; border-radius: 2px; }
-        #b-fill { width: 0%; height: 100%; transition: width 0.1s linear; background: #0f0; }
+        /* Контейнер полоски активного бонуса */
+        #b-bar { 
+            width: 800px;                 /* Базовая ширина полоски (такая же, как у игрового поля на ПК) */
+            max-width: 95%;               /* На маленьких экранах полоска не выйдет за границы и будет занимать 95% ширины */
+            height: 4px;                  /* Высота полоски (тонкая линия) */
+            background: #111;             /* Цвет подложки (темно-серый) */
+            margin-top: 8px;              /* Отступ сверху от канваса */
+            overflow: hidden;             /* Все, что выходит за границы линии, обрезается */
+            border-radius: 2px;           /* Слегка скругленные края */
+        }
+
+        /* Сама заполняющаяся часть полоски бонуса */
+        #b-fill { 
+            width: 0%;                    /* По умолчанию 0% (бонусов нет) */
+            height: 100%;                 /* Заполняет всю высоту родителя (4px) */
+            transition: width 0.1s linear; /* Плавное уменьшение длины полоски */
+            background: #0f0;             /* Цвет заполнения (зеленый) */
+        }
         
-        /* Контроллер для мобильных устройств */
-        #slider-container { width: 800px; max-width: 95%; margin-top: 40px; display: none; }
-        .touch-device #slider-container { display: block; }
-        #paddleControl { -webkit-appearance: none; width: 100%; height: 25px; background: #000; border: 2px solid var(--neon); border-radius: 15px; outline: none; }
-        #paddleControl::-webkit-slider-thumb { -webkit-appearance: none; width: 65px; height: 65px; background: #000; border: 3px solid var(--neon); border-radius: 10px; box-shadow: 0 0 15px var(--neon); cursor: pointer; }
+        /* Блок управления для мобильных (слайдер) */
+        #slider-container { 
+            width: 800px;                 /* Устанавливаем ширину зоны управления в 800 пикселей (стандарт для проекта) */
+            max-width: 95%;               /* Ограничиваем ширину до 95% от экрана устройства, чтобы ползунок не упирался в края телефона */
+            margin-top: 40px;             /* Большой отступ сверху, чтобы не нажимать на игру пальцем */
+            display: none;                /* Скрыто по умолчанию (для ПК) */
+        }
+
+        /* Если JavaScript обнаружит телефон, он добавит тегу body класс .touch-device */
+        .touch-device #slider-container { 
+            display: block;               /* Показываем слайдер только на телефонах */
+        }
+
+        /* Дизайн самого ползунка (линии) */
+        #paddleControl { 
+            -webkit-appearance: none;     /* Отключаем стандартный скучный вид браузера */
+            width: 100%;                  /* На всю ширину контейнера */
+            height: 25px;                 /* Толщина линии слайдера */
+            background: #000;             /* Черный фон линии */
+            border: 2px solid var(--neon); /* Неоновая обводка линии */
+            border-radius: 15px;          /* Закругление краев линии */
+            outline: none;                /* Убираем синюю рамку при нажатии */
+        }
+
+        /* Дизайн "ручки" ползунка (то, что тянем пальцем) */
+        #paddleControl::-webkit-slider-thumb { 
+            -webkit-appearance: none;     /* Отключаем стандартную круглую кнопку */
+            width: 65px;                  /* Большая ширина для удобства попадания пальцем */
+            height: 65px;                 /* Большая высота кнопки */
+            background: #000;             /* Черный фон кнопки */
+            border: 3px solid var(--neon); /* Толстая неоновая обводка кнопки */
+            border-radius: 10px;          /* Форма кнопки — квадрат со скруглением */
+            box-shadow: 0 0 15px var(--neon); /* Свечение вокруг кнопки */
+            cursor: pointer;              /* Указатель мыши (для тестов на ПК) */
+        }
     </style>
 </head>
+
 <body>
     <div id="header">ZVX and AI PING PONG v1.2.6</div>
     
+	     <!-- Основной контейнер верхней панели (Heads-Up Display) -->
     <div class="hud">
-        <div>SCORE: <span id="score">0</span> <span id="argus-label" style="display:none; color:#a0f;">| ARGUS: <span id="argus-score">0</span></span></div>
+        
+        <!-- ЛЕВЫЙ БЛОК: Текущий счет игрока -->
+        <div>
+            <!-- Текст "SCORE" и числовое значение (по умолчанию 0) -->
+            SCORE: <span id="score">0</span> 
+            
+            <!-- Дополнительная панель для секретного режима Argus (изначально скрыта) -->
+            <!-- style="display:none;" — делает элемент невидимым до активации режима -->
+            <span id="argus-label" style="display:none; color:#a0f;">
+                | ARGUS: <span id="argus-score">0</span>
+            </span>
+        </div>
+
+        <!-- ЦЕНТРАЛЬНЫЙ БЛОК: Текстовые сообщения (например, "WARNING" или "SLOW ACTIVE") -->
+        <!-- id="msg" — через этот идентификатор JavaScript будет менять текст внутри -->
         <div id="msg" style="color:#fff; font-size: 14px; text-shadow: 0 0 5px #fff; text-align: center;"></div>
-        <div>BEST: <span id="best">0</span> <span id="argus-best-label" style="display:none; color:#a0f;">(A: <span id="argus-best">0</span>)</span></div>
-    </div>
+
+        <!-- ПРАВЫЙ БЛОК: Лучший результат (рекорд) -->
+        <div>
+            <!-- Основной рекорд в обычном режиме -->
+            BEST: <span id="best">0</span> 
+            
+            <!-- Рекорд в режиме Argus (также скрыт до активации) -->
+            <!-- (A: 0) — сокращение для Argus Best Score -->
+            <span id="argus-best-label" style="display:none; color:#a0f;">
+                (A: <span id="argus-best">0</span>)
+            </span>
+        </div>
+        
+    </div> <!-- Конец панели HUD -->
 
     <div id="game-container">
         <canvas id="game" width="800" height="500"></canvas>
@@ -60,14 +192,35 @@
     </div>
 
     <script>
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        const headerEl = document.getElementById('header');
-        const scoreEl = document.getElementById('score');
-        const bestEl = document.getElementById('best');
-        const bFill = document.getElementById('b-fill');
-        const msgEl = document.getElementById('msg');
-        const slider = document.getElementById('paddleControl');
+		// ------------------------------------------------------------
+		// СЕКЦИЯ: ПОИСК ЭЛЕМЕНТОВ И ПОДГОТОВКА ХОЛСТА
+		// ------------------------------------------------------------
+
+		/* Ищем само игровое поле (Canvas) в HTML по его ID 'game' */
+		const canvas = document.getElementById('game');
+
+		/* Создаем "контекст рисования" (ctx). 
+       '2d' означает, что мы будем рисовать плоские фигуры: линии, круги и квадраты */
+		const ctx = canvas.getContext('2d');
+
+		/* Связываем переменную headerEl с заголовком игры, чтобы менять его текст или цвет */
+		const headerEl = document.getElementById('header');
+
+		/* Связываем переменную scoreEl с числом текущих очков в панели HUD */
+		const scoreEl = document.getElementById('score');
+	
+		/* Связываем переменную bestEl с числом лучшего рекорда */
+		const bestEl = document.getElementById('best');
+
+		/* Связываем bFill с полоской бонусов, чтобы менять её длину (ширину) в процентах */
+		const bFill = document.getElementById('b-fill');
+
+		/* Связываем msgEl с пустым блоком сообщений, чтобы выводить туда текст "WARNING" и т.д. */
+		const msgEl = document.getElementById('msg');
+
+		/* Связываем slider с ползунком управления, чтобы считывать движение пальца игрока */
+		const slider = document.getElementById('paddleControl');
+
         
         // Глобальные состояния
         let gameActive = false;
@@ -75,42 +228,83 @@
         let isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         if (isTouch) document.body.classList.add('touch-device');
 				
-		// Функция для активации вибро-отклика
+		// ------------------------------------------------------------
+		// СЕКЦИЯ: ЗВУКОВАЯ СИСТЕМА (Web Audio API)
+		// ------------------------------------------------------------
+
+		/* Создаем ссылку на аудио-движок браузера (поддержка для Chrome и Safari) */
+		const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+		/* Переменная для хранения самого аудио-контекста (изначально пустая) */
+		let audioCtx = null;
+
+		/* Объект SFX (Sound Effects) — содержит все звуковые функции игры */
+		const SFX = {
+    
+		/* Функция инициализации: "будит" звук после первого нажатия пользователя */
+		init() { 
+        /* Если контекст еще не создан — создаем его */
+        if (!audioCtx) audioCtx = new AudioContext(); 
+        /* Если звук "завис" (особенность браузеров) — возобновляем его работу */
+        if (audioCtx.state === 'suspended') audioCtx.resume(); 
+    },
+
+		/* Универсальный генератор звука: частота, тип волны, длительность, громкость */
+		play(freq, type, duration, vol = 0.1) {
+        this.init(); // Проверяем, готов ли звук
+        
+        const osc = audioCtx.createOscillator(); // Создаем "осциллятор" (генератор волны)
+        const gain = audioCtx.createGain();       // Создаем "регулятор громкости"
+        
+        osc.type = type; // Устанавливаем форму волны: 'sine' (мягкая), 'square' (резкая) и т.д.
+        
+        /* Устанавливаем частоту звука (высокий или низкий тон) */
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        
+        /* Устанавливаем начальную громкость */
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        
+        /* Плавное затухание звука до почти нуля (0.0001), чтобы не было резких щелчков */
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        
+        /* Соединяем генератор с регулятором, а регулятор — с динамиками */
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start(); // Включаем звук
+        osc.stop(audioCtx.currentTime + duration); // Выключаем звук по истечении времени
+    },
+
+		/* Конкретные звуковые эффекты (наборы настроек для функции play) */
+    
+		/* Звук удара об стены (низкий, резкий квадратный сигнал) */
+		hit() { this.play(150, 'square', 0.1); },
+    
+		/* Звук удара об ракетку (чистый тон "ля" 440Гц, мягкая волна) */
+		paddle() { this.play(440, 'sine', 0.15); },
+    
+		/* Звук подбора бонуса (высокий, "кристальный" звук) */
+		powerup() { this.play(880, 'triangle', 0.4); },
+    
+		/* Звук получения урона (очень низкий, жужжащий пилообразный звук) */
+		damage() { this.play(60, 'sawtooth', 0.3, 0.2); },
+    
+		/* Звук отскока от треугольника (короткий и мягкий) */
+		triangle() { this.play(200, 'sine', 0.1, 0.2); }
+	};
+
+		// ------------------------------------------------------------
+		// СЕКЦИЯ: СИСТЕМА ВИБРАЦИИ 
+		// ------------------------------------------------------------
+
+		/* Функция для тактильной отдачи на мобильных устройствах */
 		const vibrate = (ms) => {
-		// Проверяем, что это тач-устройство и браузер поддерживает вибрацию
+		/* Если переменная isTouch будет true (определим позже) и браузер умеет вибрировать */
 		if (isTouch && navigator.vibrate) {
-        navigator.vibrate(ms);
-			}
-		};
+        navigator.vibrate(ms); /* Вибрируем указанное количество миллисекунд */
+		}
+	};
 
-
-        // Звуковая система на базе Web Audio API
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        let audioCtx = null;
-        const SFX = {
-            init() { 
-                if (!audioCtx) audioCtx = new AudioContext(); 
-                if (audioCtx.state === 'suspended') audioCtx.resume(); 
-            },
-            play(freq, type, duration, vol = 0.1) {
-                this.init();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
-            },
-            hit() { this.play(150, 'square', 0.1); },
-            paddle() { this.play(440, 'sine', 0.15); },
-            powerup() { this.play(880, 'triangle', 0.4); },
-            damage() { this.play(60, 'sawtooth', 0.3, 0.2); },
-            triangle() { this.play(200, 'sine', 0.1, 0.2); }
-        };
 
         // Хранение рекордов
         let score = 0;
@@ -134,7 +328,10 @@
         let gameSpeedMult = 1.0;
         let scannerY = 0; // Для визуального эффекта препятствия
         let trajOn = false; // Режим ARGUS
-        const MAX_SPEED = 22;
+		/* Устанавливаем максимально допустимую скорость мяча (пикселей за кадр).
+		Значение 22 — это предел. Даже если бонусы или удары пытаются ускорить мяч сильнее,
+		он не превысит этот порог, чтобы игра оставалась честной и управляемой. */
+        const MAX_SPEED = 22; // максимальная скорость мяча
 
         // Секретный режим Argus (активируется через консоль: Argus2D)
         Object.defineProperty(window, 'Argus2D', {
@@ -165,23 +362,54 @@
         function tryStart() { 
             if (!gameActive || isGameOver) { 
                 SFX.init(); 
-				vibrate(1); // <--- ДОБАВЬ ЭТО. Пустой "пинок" для браузера, чтобы разрешить вибрацию
+				vibrate(1); // <--- ЭТО. Пустой "пинок" для браузера, чтобы разрешить вибрацию
                 resetGame(); 
                 gameActive = true; 
                 isGameOver = false; 
             } 
         }
         
-        // Слушатели событий
-        canvas.addEventListener('mousedown', tryStart);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); tryStart(); });
-        
-        slider.addEventListener('touchstart', () => { if (!gameActive || isGameOver) tryStart(); }, {passive: true});
-        slider.addEventListener('input', () => { 
-            if (!isGameOver) {
-                pY = (slider.value / 100) * (canvas.height - pH);
-            }
-        });
+			/* ------------------------------------------------------------
+			СЕКЦИЯ: СЛУШАТЕЛИ СОБЫТИЙ (УПРАВЛЕНИЕ)
+			------------------------------------------------------------ */
+
+			/* Отслеживаем нажатие кнопки мыши на игровом поле.
+			Если нажать на Canvas, запустится функция tryStart (начало игры) */
+			canvas.addEventListener('mousedown', tryStart);
+
+			/* Отслеживаем прикосновение пальца к игровому полю (для телефонов) */
+			canvas.addEventListener('touchstart', (e) => { 
+			/* e.preventDefault() — отменяет стандартные действия браузера, 
+			например, чтобы страница не дергалась при нажатии на игру */
+			e.preventDefault(); 
+			/* Запускаем игру при касании */
+			tryStart(); 
+		});
+
+			/* Отслеживаем касание пальцем ползунка управления (слайдера) */
+			slider.addEventListener('touchstart', () => { 
+			/* Если игра еще не активна или уже закончена (Game Over) */
+			if (!gameActive || isGameOver) {
+				/* ЗАПУСКАЕМ ИГРУ: теперь при первом же касании ползунка игра начнется автоматически */
+				tryStart(); 
+			}
+			/* {passive: true} — подсказка браузеру, что мы не будем отменять прокрутку здесь, 
+			это делает работу слайдера более плавной */
+		}, {passive: true});
+
+			/* Отслеживаем само перемещение ползунка (когда палец двигает его влево-вправо) */
+			slider.addEventListener('input', () => { 
+			/* Если игра сейчас идет (не режим Game Over) */
+			if (!isGameOver) {
+			/* ВЫЧИСЛЯЕМ ПОЗИЦИЮ РАКЕТКИ:
+			1. Берем значение слайдера (от 0 до 100).
+			2. Делим на 100, чтобы получить число от 0.0 до 1.0.
+			3. Умножаем на (высоту поля МИНУС высота ракетки).
+			Результат записываем в pY — это вертикальная координата ракетки на экране */
+			pY = (slider.value / 100) * (canvas.height - pH);
+		}
+		});
+
         
         window.addEventListener('mousemove', (e) => {
             if (isGameOver || isTouch) return;
